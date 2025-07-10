@@ -5,6 +5,28 @@ from PyQt5.QtGui import QTextCursor
 from keyboard_commands import insert_send_c, insert_send_v, insert_send_x, insert_send_z, insert_send_a, insert_send_text, insert_send_arrow
 from check_language import insert_language_check
 
+def insert_esc_hotkey_code(script_area):
+    """Inserts AutoIt code to stop the script with the ESC key."""
+    current_text = script_area.toPlainText()
+
+    # Prepare the header and footer code
+    header_code = "HotKeySet('{ESC}', 'End') ; Назначаем клавишу ESC для выхода из скрипта ; Проверка языка ввода\n"
+    # Add conditional newlines before the footer if current_text is not empty and doesn't end with newlines
+    footer_prefix = ""
+    if current_text and not current_text.endswith("\n\n"):
+        if current_text.endswith("\n"):
+            footer_prefix = "\n"
+        else:
+            footer_prefix = "\n\n"
+
+    footer_code = footer_prefix + "Func End()\n  Exit ; Завершает скрипт\nEndFunc\n"
+
+    # Prepend header and append footer
+    # Ensure header is at the very beginning and footer at the very end
+    new_text = header_code + current_text + footer_code
+
+    script_area.setPlainText(new_text)
+
 class UIComponents:
     @staticmethod
     def create_buttons(parent):
@@ -59,7 +81,9 @@ class UIComponents:
             ('→ Вправо', lambda: insert_send_arrow(parent.script_area, 'right')),
             # Добавляем кнопки для скролла мышкой
             ('Скролл мышкой вверх', lambda: parent.script_area.insertPlainText('MouseWheel("up",1)\n')),
-            ('Скролл мышкой вниз', lambda: parent.script_area.insertPlainText('MouseWheel("down",1)\n'))
+            ('Скролл мышкой вниз', lambda: parent.script_area.insertPlainText('MouseWheel("down",1)\n')),
+            # New button for ESC hotkey
+            ('остановить скрипт по нажатию кнопки esc', lambda: insert_esc_hotkey_code(parent.script_area))
         ]
         for label, action in keyboard_actions:
             btn = QPushButton(label)
