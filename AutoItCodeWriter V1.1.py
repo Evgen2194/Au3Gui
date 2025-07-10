@@ -459,6 +459,7 @@ class AutoItScriptGenerator(QMainWindow):
         # Cleanup resources
         self.event_handler.cleanup()
         self.coord_timer.stop()
+        self.ctrl_check_timer.stop()
         super().closeEvent(event)
 
 def main():
