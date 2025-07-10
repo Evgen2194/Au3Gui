@@ -62,7 +62,6 @@ class AutoItScriptGenerator(QMainWindow):
         ctrl_state = win32api.GetKeyState(0x11) & 0x8000
         
         if ctrl_state and not self.is_ctrl_pressed:
-            print("Ctrl key pressed - triggering handler")  # Отладочное сообщение
             if self.click_type:  # Проверяем, есть ли активное действие
                 print(f"Active click type: {self.click_type}")  # Отладочное сообщение
                 x, y = win32api.GetCursorPos()
