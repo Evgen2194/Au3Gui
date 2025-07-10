@@ -20,7 +20,7 @@ if os.path.exists(python_embedded_dir):
 import subprocess
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QPushButton, QTextEdit, QLabel, QLineEdit,
-                            QScrollArea)
+                            QScrollArea, QGroupBox, QTabWidget, QSplitter)
 from PyQt5.QtCore import Qt, QTimer, QEvent, QMetaType
 from PyQt5.QtGui import QTextCursor
 import win32gui
@@ -104,123 +104,212 @@ class AutoItScriptGenerator(QMainWindow):
 
     def initUI(self):
         self.setWindowTitle('AutoIt Script Generator')
-        self.setGeometry(100, 100, 1200, 1200)
+        self.setGeometry(100, 100, 1000, 700) # Adjusted initial window size
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        main_layout = QHBoxLayout()
-        central_widget.setLayout(main_layout)
+        main_layout = QHBoxLayout(central_widget) # Set layout directly on central_widget
 
-        # Store sidebar as an instance attribute
-        self.sidebar_widget = QWidget()
-        self.sidebar = QVBoxLayout(self.sidebar_widget)
-        main_layout.addWidget(self.sidebar_widget, 1)
+        # Create QSplitter
+        splitter = QSplitter(Qt.Horizontal)
 
-        # Add always on top button at the very top
-        self.always_on_top_btn = QPushButton('Закрепить окно')
-        self.always_on_top_btn.clicked.connect(self.toggle_always_on_top)
-        self.sidebar.addWidget(self.always_on_top_btn)
+        # Create TabWidget for the sidebar
+        self.sidebar_tabs = QTabWidget()
+        # main_layout.addWidget(self.sidebar_tabs, 1) # Sidebar takes 1 part of stretch - Now part of splitter
 
-        # Add coordinate display label
-        self.coord_label = QLabel('X: 0, Y: 0, Color: 0x000000')
-        self.coord_label.setStyleSheet('font-family: monospace; padding: 5px; background-color: #f0f0f0; border: 1px solid #ccc;')
-        self.sidebar.addWidget(self.coord_label)
+        # --- Tab 1: Основные действия ---
+        actions_tab = QWidget()
+        actions_tab_layout = QVBoxLayout(actions_tab)
+        self.sidebar_tabs.addTab(actions_tab, "Основные действия")
 
-        # Font size control buttons
-        font_size_layout = QHBoxLayout()
-        increase_font_btn = QPushButton('A+')
-        increase_font_btn.clicked.connect(lambda: self.change_font_size(True))
-        decrease_font_btn = QPushButton('A-')
-        decrease_font_btn.clicked.connect(lambda: self.change_font_size(False))
-        font_size_layout.addWidget(decrease_font_btn)
-        font_size_layout.addWidget(increase_font_btn)
-        self.sidebar.addLayout(font_size_layout)
+        # GroupBox: Действия мыши
+        mouse_actions_group = QGroupBox("Действия мыши")
+        mouse_actions_layout = QVBoxLayout(mouse_actions_group)
+        all_action_buttons = UIComponents.create_buttons(self)
+        # Add specific mouse action buttons
+        mouse_action_labels = ['Left Click', 'Right Click', 'Move Mouse', 'Drag']
+        for btn in all_action_buttons:
+            if btn.text() in mouse_action_labels:
+                mouse_actions_layout.addWidget(btn)
+        mouse_actions_group.setLayout(mouse_actions_layout)
+        actions_tab_layout.addWidget(mouse_actions_group)
 
-        # Display Scaling Input
-        scaling_layout = QHBoxLayout()
-        scaling_label = QLabel('Display Scaling (%):')
-        self.scaling_input = QLineEdit()
-        self.scaling_input.setText('150')
-        self.scaling_input.textChanged.connect(self.update_scaling)
-        scaling_layout.addWidget(scaling_label)
-        scaling_layout.addWidget(self.scaling_input)
-        self.sidebar.addLayout(scaling_layout)
+        # GroupBox: Работа с цветом
+        color_actions_group = QGroupBox("Работа с цветом")
+        color_actions_layout = QVBoxLayout(color_actions_group)
+        color_action_labels = ['Click on Color', 'Click on Color Area', 'Ждем цвет пикселя', 'Ждем цвет в области', 'Скопировать цвет пикселя']
+        for btn in all_action_buttons:
+            if btn.text() in color_action_labels:
+                color_actions_layout.addWidget(btn)
+        color_actions_group.setLayout(color_actions_layout)
+        actions_tab_layout.addWidget(color_actions_group)
 
-        # AutoIt Path Input
-        auto_it_path_layout = QHBoxLayout()
-        auto_it_path_label = QLabel('AutoIt3.exe Path:')
-        self.auto_it_path_input = QLineEdit()
-        self.auto_it_path_input.setText(self.auto_it_path)
-        self.auto_it_path_input.textChanged.connect(self.update_auto_it_path)
-        auto_it_path_layout.addWidget(auto_it_path_label)
-        auto_it_path_layout.addWidget(self.auto_it_path_input)
-        self.sidebar.addLayout(auto_it_path_layout)
+        # GroupBox: Случайные клики
+        random_clicks_group = QGroupBox("Случайные клики")
+        random_clicks_layout = QVBoxLayout(random_clicks_group)
 
-        # Add main buttons
-        for btn in UIComponents.create_buttons(self):
-            self.sidebar.addWidget(btn)
-
-        # Random Click on Coordinates Button and Input
-        random_click_layout = QVBoxLayout()
+        random_click_coord_layout = QVBoxLayout() # Renamed to avoid conflict
         random_click_label = QLabel('Random Click on Coordinates:')
         self.random_click_input = QLineEdit()
         self.random_click_input.setPlaceholderText('Enter number of coordinates')
-        random_click_button = QPushButton('Start Selection')
+        random_click_button = QPushButton('Start Selection (Coordinates)')
         random_click_button.clicked.connect(self.start_random_click_selection)
-        random_click_layout.addWidget(random_click_label)
-        random_click_layout.addWidget(self.random_click_input)
-        random_click_layout.addWidget(random_click_button)
-        self.sidebar.addLayout(random_click_layout)
+        random_click_coord_layout.addWidget(random_click_label)
+        random_click_coord_layout.addWidget(self.random_click_input)
+        random_click_coord_layout.addWidget(random_click_button)
+        random_clicks_layout.addLayout(random_click_coord_layout)
 
-        # Random Click in Area Button
-        random_area_layout = QVBoxLayout()
-        random_area_label = QLabel('Random Click in Area:')
-        random_area_button = QPushButton('Start Area Selection')
-        random_area_button.clicked.connect(self.start_area_selection)
-        random_area_layout.addWidget(random_area_label)
-        random_area_layout.addWidget(random_area_button)
-        self.sidebar.addLayout(random_area_layout)
+        # Random Click in Area Button - ensuring no duplication
+        # The button 'Random Click in Area' from UIComponents.create_buttons() will be used if its action is 'random_area'
+        # If it's not there, we might need to create it manually or adjust UIComponents.create_buttons
+        random_area_button_found = False
+        for btn in all_action_buttons:
+            if btn.text() == 'Random Click in Area': # Assuming this is the text for 'random_area' action
+                random_clicks_layout.addWidget(btn)
+                random_area_button_found = True
+                break
+        if not random_area_button_found:
+             # Fallback if not found - though UIComponents should provide it
+            manual_random_area_button = QPushButton('Random Click in Area')
+            manual_random_area_button.clicked.connect(lambda: self.prepare_action('random_area'))
+            random_clicks_layout.addWidget(manual_random_area_button)
 
-        # Add keyboard buttons
+        random_clicks_group.setLayout(random_clicks_layout)
+        actions_tab_layout.addWidget(random_clicks_group)
+        actions_tab_layout.addStretch()
+
+
+        # --- Tab 2: Клавиатура ---
+        keyboard_tab = QWidget()
+        keyboard_tab_layout = QVBoxLayout(keyboard_tab)
+        self.sidebar_tabs.addTab(keyboard_tab, "Клавиатура")
+
+        keyboard_basic_group = QGroupBox("Основные команды")
+        keyboard_basic_layout = QVBoxLayout(keyboard_basic_group)
         for btn in UIComponents.create_keyboard_buttons(self):
-            self.sidebar.addWidget(btn)
+            keyboard_basic_layout.addWidget(btn)
+        keyboard_basic_group.setLayout(keyboard_basic_layout)
+        keyboard_tab_layout.addWidget(keyboard_basic_group)
 
-        # Add comprehensive keyboard buttons toggle button
-        self.keyboard_list_btn = QPushButton('Показать кнопки клавиатуры')
+        self.keyboard_list_btn = QPushButton('Показать все кнопки клавиатуры')
         self.keyboard_list_btn.clicked.connect(self.toggle_keyboard_buttons)
-        self.sidebar.addWidget(self.keyboard_list_btn)
+        keyboard_tab_layout.addWidget(self.keyboard_list_btn)
 
-        # Add delay buttons
+        self.comprehensive_keyboard_group = QGroupBox('Все кнопки клавиатуры')
+        comprehensive_keyboard_group_layout_internal = QVBoxLayout(self.comprehensive_keyboard_group) # Renamed
+        self.comprehensive_keyboard_buttons_scroll = QScrollArea()
+        self.comprehensive_keyboard_buttons_scroll.setWidgetResizable(True)
+        self.comprehensive_keyboard_buttons_scroll.setMinimumHeight(200)
+        self.comprehensive_keyboard_buttons_widget = QWidget()
+        comprehensive_keyboard_buttons_layout_internal = QVBoxLayout(self.comprehensive_keyboard_buttons_widget) # Renamed
+        self.comprehensive_keyboard_buttons = UIComponents.create_comprehensive_keyboard_buttons(self)
+        for btn in self.comprehensive_keyboard_buttons:
+            comprehensive_keyboard_buttons_layout_internal.addWidget(btn)
+        self.comprehensive_keyboard_buttons_scroll.setWidget(self.comprehensive_keyboard_buttons_widget)
+        comprehensive_keyboard_group_layout_internal.addWidget(self.comprehensive_keyboard_buttons_scroll)
+        self.comprehensive_keyboard_group.setVisible(False)
+        keyboard_tab_layout.addWidget(self.comprehensive_keyboard_group)
+        keyboard_tab_layout.addStretch()
+
+
+        # --- Tab 3: Управление скриптом ---
+        script_control_tab = QWidget()
+        script_control_tab_layout = QVBoxLayout(script_control_tab)
+        self.sidebar_tabs.addTab(script_control_tab, "Управление скриптом")
+
+        delay_group = QGroupBox("Задержки")
+        delay_layout = QVBoxLayout(delay_group)
         for btn in UIComponents.create_delay_buttons(self):
-            self.sidebar.addWidget(btn)
+            delay_layout.addWidget(btn)
+        delay_group.setLayout(delay_layout)
+        script_control_tab_layout.addWidget(delay_group)
 
-        # Run Script Button
-        run_script_button = QPushButton('Запустить скрипт')
-        run_script_button.clicked.connect(self.run_script)
-        self.sidebar.addWidget(run_script_button)
-
-        self.script_area = QTextEdit()
-        # Установка начального размера шрифта
-        font = self.script_area.font()
-        font.setPointSize(self.font_size)
-        self.script_area.setFont(font)
-        main_layout.addWidget(self.script_area, 3)
-
-        self.status_label = QLabel('Ready')
-        self.sidebar.addWidget(self.status_label)
-
-        # Loop creation
-        loop_layout = QHBoxLayout()
+        loop_group = QGroupBox("Циклы")
+        loop_layout_internal = QHBoxLayout(loop_group) # Renamed
         loop_label = QLabel('Loop repetition:')
         self.loop_input = QLineEdit()
         self.loop_input.setText(str(self.loop_count))
         loop_button = QPushButton('Create loop')
         loop_button.clicked.connect(self.create_loop)
-        loop_layout.addWidget(loop_label)
-        loop_layout.addWidget(self.loop_input)
-        loop_layout.addWidget(loop_button)
-        self.sidebar.addLayout(loop_layout)
+        loop_layout_internal.addWidget(loop_label)
+        loop_layout_internal.addWidget(self.loop_input)
+        loop_layout_internal.addWidget(loop_button)
+        loop_group.setLayout(loop_layout_internal)
+        script_control_tab_layout.addWidget(loop_group)
+
+        run_script_button = QPushButton('Запустить скрипт')
+        run_script_button.clicked.connect(self.run_script)
+        script_control_tab_layout.addWidget(run_script_button)
+
+        self.status_label = QLabel('Ready')
+        script_control_tab_layout.addWidget(self.status_label)
+        script_control_tab_layout.addStretch()
+
+        # --- Tab 4: Настройки ---
+        settings_tab = QWidget()
+        settings_tab_layout = QVBoxLayout(settings_tab)
+        self.sidebar_tabs.addTab(settings_tab, "Настройки")
+
+        display_settings_group = QGroupBox("Окно и вид")
+        display_settings_layout = QVBoxLayout(display_settings_group)
+        self.always_on_top_btn = QPushButton('Закрепить окно')
+        self.always_on_top_btn.clicked.connect(self.toggle_always_on_top)
+        display_settings_layout.addWidget(self.always_on_top_btn)
+        self.coord_label = QLabel('X: 0, Y: 0, Color: 0x000000')
+        self.coord_label.setStyleSheet('font-family: monospace; padding: 5px; background-color: #f0f0f0; border: 1px solid #ccc;')
+        display_settings_layout.addWidget(self.coord_label)
+        font_size_layout_internal = QHBoxLayout() # Renamed
+        increase_font_btn = QPushButton('A+')
+        increase_font_btn.clicked.connect(lambda: self.change_font_size(True))
+        decrease_font_btn = QPushButton('A-')
+        decrease_font_btn.clicked.connect(lambda: self.change_font_size(False))
+        font_size_layout_internal.addWidget(decrease_font_btn)
+        font_size_layout_internal.addWidget(increase_font_btn)
+        display_settings_layout.addLayout(font_size_layout_internal)
+        display_settings_group.setLayout(display_settings_layout)
+        settings_tab_layout.addWidget(display_settings_group)
+
+        config_settings_group = QGroupBox("Конфигурация")
+        config_settings_layout = QVBoxLayout(config_settings_group)
+        scaling_layout_internal = QHBoxLayout() # Renamed
+        scaling_label = QLabel('Display Scaling (%):')
+        self.scaling_input = QLineEdit()
+        self.scaling_input.setText('150')
+        self.scaling_input.textChanged.connect(self.update_scaling)
+        scaling_layout_internal.addWidget(scaling_label)
+        scaling_layout_internal.addWidget(self.scaling_input)
+        config_settings_layout.addLayout(scaling_layout_internal)
+        auto_it_path_layout_internal = QHBoxLayout() # Renamed
+        auto_it_path_label = QLabel('AutoIt3.exe Path:')
+        self.auto_it_path_input = QLineEdit()
+        self.auto_it_path_input.setText(self.auto_it_path)
+        self.auto_it_path_input.textChanged.connect(self.update_auto_it_path)
+        auto_it_path_layout_internal.addWidget(auto_it_path_label)
+        auto_it_path_layout_internal.addWidget(self.auto_it_path_input)
+        config_settings_layout.addLayout(auto_it_path_layout_internal)
+        config_settings_group.setLayout(config_settings_layout)
+        settings_tab_layout.addWidget(config_settings_group)
+        settings_tab_layout.addStretch()
+
+        # Script Area
+        self.script_area = QTextEdit()
+        font = self.script_area.font()
+        font.setPointSize(self.font_size)
+        self.script_area.setFont(font)
+        # main_layout.addWidget(self.script_area, 3) # Script area takes 3 parts of stretch - Now part of splitter
+
+        # Add sidebar tabs and script_area to splitter
+        splitter.addWidget(self.sidebar_tabs)
+        splitter.addWidget(self.script_area)
+
+        # Set initial sizes for splitter (e.g., 1/4 for sidebar, 3/4 for script area)
+        # Calculate based on current window width or a fixed proportion
+        initial_width = self.width() # or self.geometry().width() if called after show()
+        if initial_width <= 0: initial_width = 1000 # Default if not shown yet
+        splitter.setSizes([initial_width // 4, initial_width * 3 // 4])
+
+        main_layout.addWidget(splitter) # Add splitter to the main layout
 
     def update_scaling(self):
         try:
@@ -358,37 +447,13 @@ class AutoItScriptGenerator(QMainWindow):
         self.show()  # Необходимо для применения изменений флагов окна
 
     def toggle_keyboard_buttons(self):
-        # Toggle visibility of comprehensive keyboard buttons
-        if not hasattr(self, 'comprehensive_keyboard_buttons_widget'):
-            # Create a widget to hold the comprehensive keyboard buttons
-            self.comprehensive_keyboard_buttons_widget = QWidget()
-            comprehensive_keyboard_buttons_layout = QVBoxLayout(self.comprehensive_keyboard_buttons_widget)
-            
-            # Create a scroll area for the buttons
-            self.comprehensive_keyboard_buttons_scroll = QScrollArea()
-            self.comprehensive_keyboard_buttons_scroll.setWidgetResizable(True)
-            self.comprehensive_keyboard_buttons_scroll.setWidget(self.comprehensive_keyboard_buttons_widget)
-            
-            # Create buttons
-            self.comprehensive_keyboard_buttons = UIComponents.create_comprehensive_keyboard_buttons(self)
-            
-            # Add buttons to the layout
-            for btn in self.comprehensive_keyboard_buttons:
-                comprehensive_keyboard_buttons_layout.addWidget(btn)
-            
-            # Add the scroll area to the sidebar
-            self.sidebar.addWidget(self.comprehensive_keyboard_buttons_scroll)
-            
-            # Initially hide the scroll area
-            self.comprehensive_keyboard_buttons_scroll.hide()
-        
-        # Toggle visibility of buttons scroll area
-        if self.comprehensive_keyboard_buttons_scroll.isVisible():
-            self.comprehensive_keyboard_buttons_scroll.hide()
-            self.keyboard_list_btn.setText('Показать кнопки клавиатуры')
+        # Toggle visibility of comprehensive keyboard buttons group
+        is_visible = self.comprehensive_keyboard_group.isVisible()
+        self.comprehensive_keyboard_group.setVisible(not is_visible)
+        if not is_visible:
+            self.keyboard_list_btn.setText('Скрыть кнопки клавиатуры')
         else:
-            self.comprehensive_keyboard_buttons_scroll.show()
-            self.keyboard_list_btn.setText('Hide Keyboard Buttons')
+            self.keyboard_list_btn.setText('Показать кнопки клавиатуры')
 
     def closeEvent(self, event):
         # Cleanup resources
