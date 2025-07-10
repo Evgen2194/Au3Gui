@@ -60,7 +60,6 @@ class AutoItScriptGenerator(QMainWindow):
         # Проверяем состояние клавиши Ctrl через win32api
         import win32api
         ctrl_state = win32api.GetKeyState(0x11) & 0x8000
-        print(f"Checking Ctrl state: {ctrl_state}")  # Отладочное сообщение
         
         if ctrl_state and not self.is_ctrl_pressed:
             print("Ctrl key pressed - triggering handler")  # Отладочное сообщение
